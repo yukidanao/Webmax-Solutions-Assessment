@@ -15,7 +15,12 @@ app.use(express.json());
 
 // ---- Database ----
 // The file is created automatically the first time the server starts.
-const db = new Database(process.env.DB_PATH || path.join(__dirname, 'bookings.db'));
+// Vercel functions can only write to /tmp (each instance is ephemeral), so on
+// Vercel the SQLite file lives there unless a DB_PATH env var says otherwise.
+const isVercel = !!process.env.VERCEL;
+const dbPath = process.env.DB_PATH || (isVercel ? '/tmp/bookings.db' : path.join(__dirname, 'bookings.db'));
+const db = new Database(dbPath);
+if (isVercel) console.log('Vercel detected — SQLite at ' + dbPath);
 db.exec(`
   CREATE TABLE IF NOT EXISTS bookings (
     id TEXT PRIMARY KEY,

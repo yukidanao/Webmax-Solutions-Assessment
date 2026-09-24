@@ -138,7 +138,7 @@ sed -i "s#http://localhost:3000#${API_URL}#g" site/js/config.js
 Vercel serverless functions run on AWS Lambda, where the filesystem is **read-only except `/tmp`**, and each instance is ephemeral and not shared. A local SQLite file like `server/bookings.db` **cannot persist** there the way it does on a normal server. Two realistic choices:
 
 **Option A — accept it for a demo:**
-Set env var `DB_PATH=/tmp/bookings.db` on Vercel. The API works, but the database resets whenever the function cold-starts and one request may not see a booking made seconds earlier by a different instance. Fine for a throwaway demo, not for real customers.
+The code handles this for you: when Vercel is detected (`VERCEL` env var), the server automatically uses `/tmp/bookings.db`, the only writable location. No setup needed. The API works, but the database resets whenever the function cold-starts and one request may not see a booking made seconds earlier by a different instance. Fine for a throwaway demo, not for real customers. Set `DB_PATH` only if you have a writable persistent mount to point at.
 
 **Option B — use a hosted database (recommended for a live site):**
 - **Turso** (libSQL, a SQLite fork) is the closest drop-in: your existing SQL schema stays, you just swap `better-sqlite3` for `@libsql/client` and adjust the ~15 lines of database code in `server.js`.
@@ -163,5 +163,9 @@ Happy to write the Turso migration and a Vercel `api/` function for you if you w
 - **Browser console shows a CORS error:** `FRONTEND_URL` on Vercel must match the frontend origin *exactly* — `https://yes-exactly-this.pages.dev`, no trailing slash, custom domain if you use one. Re-deploy after fixing.
 - **Sites loads but "Could not load times":** `API_URL` in `site/js/config.js` is probably still `http://localhost:3000`. Set it to your Vercel URL.
 - **Vercel returns 404 for `/api/...`:** confirm the project **Root Directory** is `server` and that `server/vercel.json` was pushed. Then test `https://<project>.vercel.app/` (should print "Gilded Razor API is running").
+- **`FUNCTION_INVOCATION_FAILED`:** the function crashed when called. Common causes and fixes:
+  1. **Read-only database** — older builds opened `server/bookings.db` in the deployment folder, which Lambda can't write to. The code now auto-uses `/tmp/bookings.db` on Vercel; redeploy to pick it up.
+  2. **Missing native binary** — `vercel.json` now force-includes `better-sqlite3`'s `prebuilds/`; make sure you redeployed that file.
+  3. Look at the exact error: open the deployment's **Logs** tab (project -> Deployments -> the failed deployment -> Logs). The stack trace names the real exception (e.g. `Error loading shared library` vs `SQLITE_CANTOPEN`).
 - **`better-sqlite3` fails to build on Vercel:** pin the Node runtime (see step 1).
 - **Bookings appear/disappear randomly:** that's the Lambda filesystem behavior in section 4 — switch to a hosted database.
