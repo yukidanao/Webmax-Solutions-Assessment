@@ -134,4 +134,8 @@ app.post('/api/bookings', (req, res) => {
   res.status(201).json(booking);
 });
 
-app.listen(PORT, () => console.log('API running on port ' + PORT));
+// Serve normally when run locally; export the app when hosted on Vercel.
+if (require.main === module) {
+  app.listen(PORT, () => console.log('API running on port ' + PORT));
+}
+module.exports = app;
