@@ -1,6 +1,6 @@
 // All the shop's content lives here, so you only edit one file.
 // After deploying the backend, paste its URL below (no trailing slash).
-const API_URL = 'http://localhost:3000';
+const API_URL = 'https://webmax-solutions-assessment.vercel.app';
 
 const SHOP = {
   name: 'Gilded Razor & Co.',
