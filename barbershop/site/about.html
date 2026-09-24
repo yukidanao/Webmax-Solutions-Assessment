@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About | Gilded Razor & Co.</title><meta name="description" content="The story of Gilded Razor & Co. and the barbers behind the chair.">
+<link rel="icon" href="images/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap"><link rel="stylesheet" href="css/style.css"></head>
+<body>
+<div id="site-header"></div>
+<main>
+  <section class="page-title"><div class="container">
+    <p class="kicker">Est. 1952 &#8226; Anchor Street</p>
+    <h1>Our story</h1>
+    <div class="ornament"><span class="dot">&#9670;</span></div>
+  </div></section>
+  <section class="section"><div class="container story">
+    <div>
+      <h2 data-reveal>A neighbourhood shop for over 70 years</h2>
+      <p class="lead" data-reveal style="--d:.1s">Gilded Razor &amp; Co. opened in 1952 as a two-chair shop on Anchor Street. The same brass mirrors still hang on our walls.</p>
+      <p class="lead" data-reveal style="--d:.2s; margin-top:14px">Today three barbers carry on that tradition: proper training, sharp tools and time for every customer. We believe a good haircut is the simplest way to feel like yourself.</p>
+      <p data-reveal style="--d:.3s; margin-top:28px"><a href="booking.html" class="btn">Book with us <span class="btn-arrow">&rarr;</span></a></p>
+    </div>
+    <div class="story-photo" role="img" aria-label="Inside the Gilded Razor barber shop" data-reveal style="--d:.2s"></div>
+  </div></section>
+  <section class="section alt"><div class="container center">
+    <div class="section-head center">
+      <p class="kicker" data-reveal>Behind the chair</p>
+      <h2 data-reveal style="--d:.1s">Meet your barbers</h2>
+      <p class="lead" data-reveal style="--d:.2s">Three craftsmen, one standard: it has to be right.</p>
+    </div>
+    <div class="grid grid-3" id="barbers" style="text-align:left"></div>
+  </div></section>
+</main>
+<div id="site-footer"></div>
+<script src="js/vendor/lenis.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/common.js"></script>
+<script>
+  document.getElementById('barbers').innerHTML = BARBERS.map((b, i) => `
+    <div class="card" data-reveal style="--d:${i * 0.12}s"><div class="avatar"><img src="images/${b.photo}" alt="Portrait of ${b.name}" loading="lazy"></div>
+    <h3>${b.name}</h3><p class="meta">${b.role}</p><p>${b.bio}</p></div>`).join('');
+  refreshReveals();
+</script>
+</body></html>

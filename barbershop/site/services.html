@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Services & Prices | Gilded Razor & Co.</title><meta name="description" content="Haircuts, fades, beard trims, hot towel shaves and grooming packages with prices.">
+<link rel="icon" href="images/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap"><link rel="stylesheet" href="css/style.css"></head>
+<body>
+<div id="site-header"></div>
+<main>
+  <section class="page-title"><div class="container">
+    <p class="kicker">Simple pricing, no hidden extras</p>
+    <h1>Services and prices</h1>
+    <p class="lead">Choose a service to begin. We'll take care of the rest in under a minute.</p>
+    <div class="ornament"><span class="dot">&#9670;</span></div>
+  </div></section>
+  <section class="section"><div class="container">
+    <div class="grid grid-3" id="service-list"></div>
+    <p class="meta center" style="margin-top:32px">Prices are in US dollars. The minutes shown are the length of your appointment.</p>
+  </div></section>
+</main>
+<div id="site-footer"></div>
+<script src="js/vendor/lenis.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/common.js"></script>
+<script>
+  document.getElementById('service-list').innerHTML = SERVICES.map((s, i) => `
+    <div class="card service-card" data-reveal style="--d:${(i % 3) * 0.1}s; --service-image: url('${s.image}')"><div class="card-row"><h3>${s.name}</h3><span class="price">$${s.price}</span></div>
+    <p class="meta">${s.minutes} minutes</p><p>${s.desc}</p>
+    <a href="booking.html?service=${s.id}#service=${s.id}" class="btn btn-small">Book this</a></div>`).join('');
+  refreshReveals();
+</script>
+</body></html>
