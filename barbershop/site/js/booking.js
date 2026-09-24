@@ -9,6 +9,8 @@ const slotsBox = document.getElementById('slots');
 const slotsMsg = document.getElementById('slots-msg');
 const errorBox = document.getElementById('form-error');
 const submitBtn = document.getElementById('submit-btn');
+const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+let shopTimezone = 'Asia/Manila'; // filled in from the availability response
 let chosenTime = '';
 const params = new URLSearchParams(location.search);
 const hashParams = new URLSearchParams(location.hash.slice(1));
@@ -52,17 +54,21 @@ async function loadSlots() {
     const url = `${API_URL}/api/availability?date=${dateInput.value}&barber=${barberSel.value}&service=${serviceSel.value}`;
     const res = await fetch(url);
     const data = await res.json();
+    if (data.shopTz) shopTimezone = data.shopTz;
     if (!res.ok) { slotsMsg.textContent = data.error; return; }
     if (data.slots.length === 0) {
       slotsMsg.textContent = data.message || 'No times left on this day. Try another date or barber.';
       return;
     }
-    slotsMsg.textContent = 'Pick a time:';
+    slotsMsg.textContent = 'Pick a time:' + (shopTimezone !== userTz
+      ? ` Times are shown in your timezone (${userTz}). The shop is in ${shopTimezone}.`
+      : '');
     data.slots.forEach((time) => {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'slot';
-      b.textContent = formatTime(time);
+      const [sh, sm] = time.split(':').map(Number);
+      b.textContent = localTimeLabel(wallClockToInstant(shopTimezone, dateInput.value, sh * 60 + sm));
       b.addEventListener('click', () => {
         chosenTime = time;
         slotsBox.querySelectorAll('.slot').forEach((s) => s.classList.remove('selected'));
@@ -77,10 +83,28 @@ async function loadSlots() {
 [serviceSel, barberSel, dateInput].forEach((el) => el.addEventListener('change', loadSlots));
 loadSlots();
 
-// "15:30" -> "3:30 PM"
-function formatTime(time) {
-  const [h, m] = time.split(':').map(Number);
-  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+// ---- Timezone helpers ----
+// The API sends slot times as wall-clock time in the shop's timezone (SHOP_TZ).
+// Turn a shop-local "YYYY-MM-DD HH:MM" into an absolute moment, then format it
+// for display or for a calendar stamp, so testers see times in THEIR timezone.
+function wallClockToInstant(shopTz, date, minutes) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  const guess = new Date(Date.UTC(+date.slice(0, 4), +date.slice(5, 7) - 1, +date.slice(8, 10), h, m));
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: shopTz, hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+  }).formatToParts(guess);
+  const get = (type) => Number(parts.find((p) => p.type === type).value);
+  const offset = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute')) - guess.getTime();
+  return new Date(guess.getTime() - offset);
+}
+function localTimeLabel(moment) {
+  return moment.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+function localDateKey(moment) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${moment.getFullYear()}-${p(moment.getMonth() + 1)}-${p(moment.getDate())}`;
 }
 function formatDate(date) {
   return new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
@@ -119,11 +143,12 @@ form.addEventListener('submit', async (e) => {
 });
 
 // ---- Calendar ----
-// Calendar dates look like 20261001T150000 (no Z, so it shows as 3:00 PM wherever the customer is)
-function calStamp(date, minutes) {
-  const h = String(Math.floor(minutes / 60)).padStart(2, '0');
-  const m = String(minutes % 60).padStart(2, '0');
-  return date.replace(/-/g, '') + 'T' + h + m + '00';
+// Stamps are UTC with a trailing Z, i.e. the same absolute moment everywhere,
+// so a tester in another country sees the appointment at their local clock time.
+function utcStamp(moment) {
+  const p = (n) => String(n).padStart(2, '0');
+  return moment.getUTCFullYear() + p(moment.getUTCMonth() + 1) + p(moment.getUTCDate()) +
+    'T' + p(moment.getUTCHours()) + p(moment.getUTCMinutes()) + p(moment.getUTCSeconds()) + 'Z';
 }
 function icsText(s) { // escape special characters for .ics files
   return String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
@@ -131,9 +156,11 @@ function icsText(s) { // escape special characters for .ics files
 
 function showConfirmation(b) {
   const [h, m] = b.time.split(':').map(Number);
-  const startMin = h * 60 + m;
-  const start = calStamp(b.date, startMin);
-  const end = calStamp(b.date, startMin + b.minutes); // end = start + service length
+  const tz = shopTimezone || 'Asia/Manila';
+  const startMoment = wallClockToInstant(tz, b.date, h * 60 + m);
+  const endMoment = new Date(startMoment.getTime() + b.minutes * 60000); // end = start + service length
+  const start = utcStamp(startMoment);
+  const end = utcStamp(endMoment);
   const title = `${b.serviceName} at ${SHOP.name}`;
   const details = `Barber: ${b.barberName}\nService: ${b.serviceName} (${b.minutes} min)\nBooking ref: ${b.id}\nPlease arrive 5 minutes early. To change or cancel, call ${SHOP.phone} at least 24 hours before.`;
 
@@ -159,7 +186,7 @@ function showConfirmation(b) {
       <ul class="summary">
         <li><strong>Service:</strong> ${b.serviceName}${b.promo ? ' (10% first-visit discount applies)' : ''}</li>
         <li><strong>Barber:</strong> ${b.barberName}</li>
-        <li><strong>When:</strong> ${formatDate(b.date)}, ${formatTime(b.time)} - ${formatTime(calStamp(b.date, startMin + b.minutes).slice(9, 11) + ':' + calStamp(b.date, startMin + b.minutes).slice(11, 13))}</li>
+        <li><strong>When:</strong> ${formatDate(localDateKey(startMoment))}, ${localTimeLabel(startMoment)} - ${localTimeLabel(endMoment)}</li>
         <li><strong>Where:</strong> ${SHOP.address}</li>
       </ul>
       <div class="cal-buttons">

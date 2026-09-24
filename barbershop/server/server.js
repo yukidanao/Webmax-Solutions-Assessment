@@ -100,8 +100,8 @@ app.get('/api/availability', (req, res) => {
     return res.status(400).json({ error: 'Choose a service, barber and date.' });
   }
   const day = new Date(date + 'T00:00:00Z').getUTCDay();
-  if (!HOURS[day]) return res.json({ slots: [], message: 'We are closed on Mondays. Please pick another day.' });
-  res.json({ slots: freeSlots(date, barber, service) });
+  if (!HOURS[day]) return res.json({ slots: [], message: 'We are closed on Mondays. Please pick another day.', shopTz: SHOP_TZ });
+  res.json({ slots: freeSlots(date, barber, service), shopTz: SHOP_TZ });
 });
 
 app.post('/api/bookings', (req, res) => {
